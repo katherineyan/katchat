@@ -36,6 +36,9 @@ int main(int argc, char** argv) {
   }
   int port = atoi(argv[1]);
 
+  //message buffer
+  char msg[1024];
+
   //setup socket, IP, and ports
   struct sockaddr_in sa;
   memset(&sa, 0, sizeof(sa));
@@ -47,27 +50,27 @@ int main(int argc, char** argv) {
   int SocketFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (SocketFD < 0) {
   	perror("Error creating server socket");
-  	exit(0);
+  	exit(EXIT_FAILURE);
   }
   
   //bind socket to local address
   int bindStatus = bind(SocketFD,(struct sockaddr *)&sa, sizeof(sa));
   if (bindStatus < 0) {
   	perror("Error binding socket");
-  	exit(0);
+  	exit(EXIT_FAILURE);
   }
 
   //listen for incoming connections
   if (listen(SocketFD, 10) < 0) {
     perror("Error listening for connection");
     close(SocketFD);
-    exit(0);
+    exit(EXIT_FAILURE);
   }
 
     // int count = 0;
     // binary = false;
 
-  /*----------- LOOP CONTINOUSLY ------------*/
+  /*----------- LOOP CONTINOUSLY TO LISTEN ------------*/
   for (;;) {
 
   	//accept to initialize connection
@@ -75,11 +78,11 @@ int main(int argc, char** argv) {
   	if (0 > ConnectFD) {
   		perror("Error, accept failed");
   		close(SocketFD);
-  		exit(0);
+  		exit(EXIT_FAILURE);
     } 
 
   	//send success message to client 
-  	char msg[] = "Welcome to katchat\r\n";
+    strcpy(msg, "Welcome to katchat\r\n");
   	int retval = send(ConnectFD, msg, strlen(msg), 0);
   	if (retval < 0) {
   		perror("Error, send failed");
@@ -88,22 +91,35 @@ int main(int argc, char** argv) {
       exit(EXIT_FAILURE);
     }
 
+    /*----------- READING COMMANDS FROM CLIENT ------------*/
     //start reading from client
     while(1) {
 
-    	//setup buffer for reading 
-    	char buffer[1024];
-
       //read message from client 
-      retval = recv(ConnectFD, buffer, sizeof(buffer), 0);
+      memset(&msg, 0, sizeof(msg)); //clear message buffer
+      retval = recv(ConnectFD, msg, sizeof(msg), 0);
       if (retval == -1) {
       	perror("Error, reading failed");
       	close(ConnectFD);
       	close(SocketFD);
-      	exit(0);
+      	exit(EXIT_FAILURE);
       }
 
       /*----------- COMMANDS ------------*/
+
+      //quit: terminate command connection
+      if(strncmp(msg, "quit", 4) == 0) {
+        strcpy(msg, "Server closing control connection.\r\n");
+        send(ConnectFD, msg, sizeof(msg), 0);
+        exit(EXIT_sSUCCESS);
+      }
+
+      //something else:
+      // else if(1 == 1) {}
+
+
+
+
     }
   }
 

@@ -1,3 +1,8 @@
 # katchat
 
-Welcome to my chat server
+Welcome to katchat, a simple chat server built entirely in C++.
+
+### How to use:
+
+
+### Features: 
