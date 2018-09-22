@@ -33,16 +33,18 @@ class chat_room {
   string title;
   int num_users;
 public:
-  chat_room(vector<string>, string);
+  chat_room(vector<string> unames, string t): usernames(unames), title(t), num_users(unames.size()) {}
   string get_title() const { return title;}
   int get_num_users() const {return num_users;}
+  bool operator==(const chat_room & obj2) const
+  {
+    if(this->get_title().compare(obj2.get_title()) == 0)
+      return true;
+    else
+      return false;
+  }
 };
 
-chat_room::chat_room(vector<string> unames, string t) { //constructor
-  usernames = unames;
-  title = t;
-  num_users = unames.size();
-}
 
 /*----------- THREADS ------------*/
 //thread struct
@@ -197,7 +199,7 @@ void* handle_client(void* arg) {
         else if(strncmp(buff, "/join", 5) == 0) {
           currchat = &buff[6];
           cout << currchat << endl;
-
+          //check if room exists
           // if(count( currchat) == 0) {
           //   strcpy(buff, "Sorry, room doesn't exist\r\n");
           // }
@@ -205,6 +207,13 @@ void* handle_client(void* arg) {
           //   sprintf(buff, "Entering room: %s", currchat);
           //   inchat = true;
           // }
+          //enter room
+          memset(&buff, 0, sizeof(buff));
+          sprintf(buff, "entering room: %s", currchat);
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+          //update list and num of people
+          //print list of people
+
         }
 
         //quit: terminate connection
