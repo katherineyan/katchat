@@ -81,6 +81,9 @@ void* handle_client(void* arg) {
   char buff[1024];
   //logged in or not
   bool loggedin = false;
+  //in chatroom or not
+  bool inchat = false;
+  char* currchat;
 
   //send success message to client 
   strcpy(buff, "Welcome to katchat\r\nPlease login to continue\r\n");
@@ -123,38 +126,89 @@ void* handle_client(void* arg) {
     //if loggedin, handle normal requests
     else {
 
-      //rooms: show active rooms 
-      if(strncmp(buff, "/rooms", 6) == 0) {
-        if (c_rooms.empty()) { //no rooms
-          strcpy(buff, "There are currently no active rooms\r\n");
+      //if we're in a chat room
+      if (inchat) {
+
+        //leave: leaving room
+        if(strncmp(buff, "/leave", 6) == 0) { 
+          //edit room variables
+
+          memset(&buff, 0, sizeof(buff)); //clear message buffer
+          sprintf(buff, "* user has left chat: %s", t->name.c_str()); //how to broadcast to whole chat?
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+          inchat = false;
+        }
+
+        //unknown command (starts with a "/")
+        else if (strncmp(buff, "/", 1) == 0){
+          memset(&buff, 0, sizeof(buff));
+          strcpy(buff, "Unknown command.\r\n");
           send(t->ConnectFD, buff, sizeof(buff), 0);
         }
-        else { //nonzero num rooms
-          strcpy(buff, "Active rooms are:\r\n");
-          send(t->ConnectFD, buff, sizeof(buff), 0);
-          for(vector<chat_room>::const_iterator i = c_rooms.begin(); i != c_rooms.end(); ++i) {
-            memset(&buff, 0, sizeof(buff)); //clear message buffer
-            sprintf(buff, "* %s (%d)\r\n", i->get_title().c_str(), i->get_num_users());
+
+        //just saying stuff
+        else {
+          //need to broadcast to all chat????
+          int temp = 1;
+        }
+
+      }
+
+      //if not in a chat room
+      else {
+
+        //rooms: show active rooms 
+        if(strncmp(buff, "/rooms", 6) == 0) {
+          if (c_rooms.empty()) { //no rooms
+            memset(&buff, 0, sizeof(buff));
+            strcpy(buff, "There are currently no active rooms\r\n");
             send(t->ConnectFD, buff, sizeof(buff), 0);
           }
-        } 
+          else {
+            memset(&buff, 0, sizeof(buff));
+            strcpy(buff, "Active rooms are:\r\n");
+            send(t->ConnectFD, buff, sizeof(buff), 0);
+            for(vector<chat_room>::const_iterator i = c_rooms.begin(); i != c_rooms.end(); ++i) {
+              memset(&buff, 0, sizeof(buff)); //clear message buffer
+              sprintf(buff, "* %s (%d)\r\n", i->get_title().c_str(), i->get_num_users());
+              send(t->ConnectFD, buff, sizeof(buff), 0);
+            }
+            memset(&buff, 0, sizeof(buff)); //clear message buffer
+            strcpy(buff, "end of list.\r\n");
+            send(t->ConnectFD, buff, sizeof(buff), 0);
+          } 
+        }
+
+        //join: join an active room
+        else if(strncmp(buff, "/join", 5) == 0) {
+          currchat = &buff[6];
+          cout << currchat << endl;
+
+          // if(count( currchat) == 0) {
+          //   strcpy(buff, "Sorry, room doesn't exist\r\n");
+          // }
+          // else {
+          //   sprintf(buff, "Entering room: %s", currchat);
+          //   inchat = true;
+          // }
+        }
+
+        //quit: terminate connection
+        else if(strncmp(buff, "/quit", 5) == 0) {
+          memset(&buff, 0, sizeof(buff));
+          strcpy(buff, "Server closing control connection.\r\n");
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+          // exit(EXIT_SUCCESS); !!!!!!!!!exits the server, need to exit client
+        }
+
+        //unknown command
+        else {
+          memset(&buff, 0, sizeof(buff));
+          strcpy(buff, "Unknown command.\r\n");
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+        }
+
       }
-
-
-
-      //quit: terminate command connection
-      else if(strncmp(buff, "/quit", 5) == 0) {
-        strcpy(buff, "Server closing control connection.\r\n");
-        send(t->ConnectFD, buff, sizeof(buff), 0);
-        // exit(EXIT_SUCCESS); !!!!!!!!!exits the server, need to exit client
-      }
-
-      //unknown command
-      else {
-        strcpy(buff, "Unknown command.\r\n");
-        send(t->ConnectFD, buff, sizeof(buff), 0);
-      }
-
     }
   }
 }
@@ -162,6 +216,41 @@ void* handle_client(void* arg) {
 
 /*----------- MAIN METHOD ------------*/
 int main(int argc, char** argv) {
+
+  /*----------- BASE USERS AND ROOMS ------------*/
+  //fake lists for rooms
+  vector<string> users1;
+  vector<string> users2;
+  vector<string> users3;
+  //fake users
+  users.push_back("katherine\r\n");
+  users1.push_back("katherine\r\n");
+  users.push_back("mario\r\n");
+  users3.push_back("mario\r\n");
+  users.push_back("gh\r\n");
+  users2.push_back("gh\r\n");
+  users.push_back("luigi\r\n");
+  users3.push_back("luigi\r\n");
+  users.push_back("bowser\r\n");
+  users3.push_back("bowser\r\n");
+  users.push_back("link\r\n");
+  users3.push_back("link\r\n");
+  users.push_back("zelda\r\n");
+  users3.push_back("zelda\r\n");
+  users.push_back("isaac\r\n");
+  users2.push_back("isaac\r\n");
+  users.push_back("apollo\r\n");
+  users2.push_back("apollo\r\n");
+  users.push_back("gizmo\r\n");
+  users2.push_back("gizmo\r\n");
+  //fake chat rooms
+  chat_room chat1(users1, "chatty_kathy");
+  chat_room chat2(users2, "hottub");
+  chat_room chat3(users3, "super_smash_bros");
+  c_rooms.push_back(chat1);
+  c_rooms.push_back(chat2);
+  c_rooms.push_back(chat3);
+
 
 	/*----------- SETUP ------------*/
 	//make sure to get port number
@@ -171,26 +260,6 @@ int main(int argc, char** argv) {
   }
   int port = atoi(argv[1]);
 
-  //fake users
-  users.push_back("katherine\r\n");
-  users.push_back("mario\r\n");
-  users.push_back("gh\r\n");
-  users.push_back("luigi\r\n");
-  users.push_back("bowser\r\n");
-  users.push_back("link\r\n");
-  users.push_back("zelda\r\n");
-  users.push_back("isaac\r\n");
-  users.push_back("apollo\r\n");
-  users.push_back("gizmo\r\n");
-  //fake chat rooms
-  chat_room chat1(users, "CR1");
-  chat_room chat2(users, "CR2");
-  chat_room chat3(users, "CR3");
-  c_rooms.push_back(chat1);
-  c_rooms.push_back(chat2);
-  c_rooms.push_back(chat3);
-
-  
   //setup socket, IP, and ports
   struct sockaddr_in sa;
   memset(&sa, 0, sizeof(sa));
