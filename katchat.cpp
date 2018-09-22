@@ -49,11 +49,11 @@ chat_room::chat_room(vector<string> unames, string t, int num) { //constructor
 //   }
 // }
 
-/*----------- THREADS ------------*/
 
+/*----------- THREADS ------------*/
 //thread struct
 struct thread_arg {
-  // string name;
+  string name;
   int id;
   int SocketFD;
   int ConnectFD;
@@ -69,10 +69,11 @@ pthread_t threads[1000];
 /*----------- OTHER GLOBAL VARIABLES ------------*/
 //message buffer
 char msg[1024];
-//name buffer
-string name;
 //all users
 vector<string> users;
+//all chat rooms
+vector<chat_room> c_rooms;
+chat_room chat(users, "Chat A", 3);
 
 
 /*----------- THREAD HELPER METHOD ------------*/
@@ -81,11 +82,12 @@ void* handle_client(void* arg) {
 
   //cast to thread_arg 
   thread_arg* t = (thread_arg*) arg;
-
   cout << t->id << endl;
 
   //messsage buffer
   char buff[1024];
+  //logged in or not
+  bool loggedin = false;
 
   //send success message to client 
   strcpy(buff, "Welcome to katchat\r\nPlease login to continue\r\n");
@@ -97,15 +99,76 @@ void* handle_client(void* arg) {
     exit(EXIT_FAILURE);
   }
 
+  /*----------- READING COMMANDS FROM CLIENT ------------*/
+    
+  while(1) {
 
+    //read message from client to get username
+    memset(&buff, 0, sizeof(buff)); //clear message buffer
+    retval = recv(t->ConnectFD, buff, sizeof(buff), 0);
+    if (retval == -1) {
+      perror("Error, reading failed");
+      close(t->ConnectFD);
+      close(t->SocketFD);
+      exit(EXIT_FAILURE);
+    }
 
+    //get username if not loggedin
+    if (!loggedin) {
+      t->name = string(buff); 
+      if (count(users.begin(), users.end(), t->name)) {
+        strcpy(buff, "Sorry, username taken\r\n");
+      }
+      else {
+        sprintf(buff, "Welcome %s", t->name.c_str());
+        loggedin = true;
+      }  
+      send(t->ConnectFD, buff, sizeof(buff), 0);
+    }
+
+    //else handle normal requests
+    else {
+
+      //rooms: show active rooms 
+      if(strncmp(buff, "/rooms", 6) == 0) {
+        if (c_rooms.empty()) { //no rooms
+          strcpy(buff, "There are currently no active rooms\r\n");
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+        }
+        else { //nonzero num rooms
+          strcpy(buff, "Active rooms are:\r\n");
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+          // for(vector<chat_room>::const_iterator i = c_rooms.begin(); i != c_rooms.end(); ++i) {
+          //   strcpy(msg, *i->title.c_str());
+          //   send(ConnectFD, msg, sizeof(msg), 0);
+          // }
+        } 
+      }
+
+      
+
+      //quit: terminate command connection
+      else if(strncmp(buff, "/quit", 5) == 0) {
+        strcpy(buff, "Server closing control connection.\r\n");
+        send(t->ConnectFD, buff, sizeof(buff), 0);
+        // exit(EXIT_SUCCESS); !!!!!!!!!exits the server, need to exit client
+      }
+
+      //unknown command
+      else {
+        strcpy(buff, "Unknown command.\r\n");
+        send(t->ConnectFD, buff, sizeof(buff), 0);
+      }
+
+    }
+  }
 }
 
 
+/*----------- MAIN METHOD ------------*/
 int main(int argc, char** argv) {
 
 	/*----------- SETUP ------------*/
-
 	//make sure to get port number
 	if(argc != 2) {
 	perror("Error, no port provided");
@@ -113,7 +176,7 @@ int main(int argc, char** argv) {
   }
   int port = atoi(argv[1]);
 
-  
+  //fake users
   users.push_back("katherine\r\n");
   users.push_back("mario\r\n");
   users.push_back("gh\r\n");
@@ -124,10 +187,7 @@ int main(int argc, char** argv) {
   users.push_back("isaac\r\n");
   users.push_back("apollo\r\n");
   users.push_back("gizmo\r\n");
-  //all chat rooms
-  vector<chat_room> c_rooms;
-  chat_room* chat;
-
+  
   //setup socket, IP, and ports
   struct sockaddr_in sa;
   memset(&sa, 0, sizeof(sa));
@@ -169,9 +229,9 @@ int main(int argc, char** argv) {
 
     //create new thread for the connection
     if (CURR_NUM_CLIENTS < MAX_NUM_CLIENTS - 1) {
+      arg[CURR_NUM_CLIENTS].id = CURR_NUM_CLIENTS;
       arg[CURR_NUM_CLIENTS].SocketFD = SocketFD;
       arg[CURR_NUM_CLIENTS].ConnectFD = ConnectFD;
-      arg[CURR_NUM_CLIENTS].id = CURR_NUM_CLIENTS;
       pthread_create(&threads[CURR_NUM_CLIENTS], NULL, handle_client, &arg[CURR_NUM_CLIENTS]);
       CURR_NUM_CLIENTS += 1;
     }
