@@ -86,10 +86,10 @@ void* handle_client(void* arg) {
   char* currchat;
 
   //send success message to client 
-  strcpy(buff, "Welcome to katchat\r\nPlease login to continue\r\n");
+  strcpy(buff, "Welcome to katchat!\r\nPlease login to continue.\r\n");
   int retval = send(t->ConnectFD, buff, strlen(buff), 0);
   if (retval < 0) {
-    perror("Error, send failed");
+    perror("Error, send failed.");
     close(t->ConnectFD);
     close(t->SocketFD);
     exit(EXIT_FAILURE);
@@ -103,7 +103,7 @@ void* handle_client(void* arg) {
     memset(&buff, 0, sizeof(buff)); //clear message buffer
     retval = recv(t->ConnectFD, buff, sizeof(buff), 0);
     if (retval == -1) {
-      perror("Error, reading failed");
+      perror("Error, reading failed.");
       close(t->ConnectFD);
       close(t->SocketFD);
       exit(EXIT_FAILURE);
@@ -113,7 +113,7 @@ void* handle_client(void* arg) {
     if (!loggedin) {
       t->name = string(buff); 
       if (count(users.begin(), users.end(), t->name)) {
-        strcpy(buff, "Sorry, username taken\r\n");
+        strcpy(buff, "Sorry, username taken.\r\n");
       }
       else {
         sprintf(buff, "Welcome %s", t->name.c_str());
@@ -139,9 +139,17 @@ void* handle_client(void* arg) {
           inchat = false;
         }
 
-        else if(strncmp(buff, "/join", 5) == 0) { 
+        //join/rooms: error 
+        else if((strncmp(buff, "/join", 5) == 0) || (strncmp(buff, "/rooms", 6) == 0) ) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
-          strcpy(buff, "You're already in a chat room\r\n");
+          strcpy(buff, "You're already in a chat room.\r\n");
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+        }
+
+        //quit: error
+        else if(strncmp(buff, "/quit", 5) == 0) { 
+          memset(&buff, 0, sizeof(buff)); //clear message buffer
+          strcpy(buff, "You must exit the room before you quit.\r\n");
           send(t->ConnectFD, buff, sizeof(buff), 0);
         }
 
@@ -167,7 +175,7 @@ void* handle_client(void* arg) {
         if(strncmp(buff, "/rooms", 6) == 0) {
           if (c_rooms.empty()) { //no rooms
             memset(&buff, 0, sizeof(buff));
-            strcpy(buff, "There are currently no active rooms\r\n");
+            strcpy(buff, "There are currently no active rooms.\r\n");
             send(t->ConnectFD, buff, sizeof(buff), 0);
           }
           else {
@@ -180,7 +188,7 @@ void* handle_client(void* arg) {
               send(t->ConnectFD, buff, sizeof(buff), 0);
             }
             memset(&buff, 0, sizeof(buff)); //clear message buffer
-            strcpy(buff, "end of list.\r\n");
+            strcpy(buff, "end of list\r\n");
             send(t->ConnectFD, buff, sizeof(buff), 0);
           } 
         }
@@ -212,7 +220,6 @@ void* handle_client(void* arg) {
           memset(&buff, 0, sizeof(buff));
           strcpy(buff, "You're not in a chat room right now.\r\n");
           send(t->ConnectFD, buff, sizeof(buff), 0);
-          // exit(EXIT_SUCCESS); !!!!!!!!!exits the server, need to exit client
         }
 
         //unknown command
@@ -269,7 +276,7 @@ int main(int argc, char** argv) {
 	/*----------- SETUP ------------*/
 	//make sure to get port number
 	if(argc != 2) {
-	perror("Error, no port provided");
+	perror("Error, no port provided.");
       exit(0);
   }
   int port = atoi(argv[1]);
@@ -284,20 +291,20 @@ int main(int argc, char** argv) {
   //create socket
   int SocketFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (SocketFD < 0) {
-  	perror("Error creating server socket");
+  	perror("Error creating server socket.");
   	exit(EXIT_FAILURE);
   }
   
   //bind socket to local address
   int bindStatus = bind(SocketFD,(struct sockaddr *)&sa, sizeof(sa));
   if (bindStatus < 0) {
-  	perror("Error binding socket");
+  	perror("Error binding socket.");
   	exit(EXIT_FAILURE);
   }
 
   //listen for incoming connections
   if (listen(SocketFD, 10) < 0) {
-    perror("Error listening for connection");
+    perror("Error listening for connection.");
     close(SocketFD);
     exit(EXIT_FAILURE);
   }
@@ -308,7 +315,7 @@ int main(int argc, char** argv) {
   	//accept to initialize connection
   	int ConnectFD = accept(SocketFD, NULL, NULL);
   	if (0 > ConnectFD) {
-  		perror("Error, accept failed");
+  		perror("Error, accept failed.");
   		close(SocketFD);
   		exit(EXIT_FAILURE);
     } 
@@ -323,10 +330,10 @@ int main(int argc, char** argv) {
     }
     //else if we've reached the max number of people
     else {
-      strcpy(msg, "Sorry, the max number of people on katchat has been reached\r\n");
+      strcpy(msg, "Sorry, the max number of people on katchat has been reached.\r\n");
       int retval = send(ConnectFD, msg, strlen(msg), 0);
       if (retval < 0) {
-        perror("Error, send failed");
+        perror("Error, send failed.");
         close(ConnectFD);
         close(SocketFD);
         exit(EXIT_FAILURE);
