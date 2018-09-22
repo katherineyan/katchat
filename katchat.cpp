@@ -33,22 +33,16 @@ class chat_room {
   string title;
   int num_users;
 public:
-  chat_room(vector<string>, string, int);
-  // void print_users();
+  chat_room(vector<string>, string);
+  string get_title() const { return title;}
+  int get_num_users() const {return num_users;}
 };
 
-chat_room::chat_room(vector<string> unames, string t, int num) { //constructor
+chat_room::chat_room(vector<string> unames, string t) { //constructor
   usernames = unames;
   title = t;
-  num_users = num;
+  num_users = unames.size();
 }
-
-// void chat_room::print_users() {
-//   for(vector<string>::const_iterator i = usernames.begin(); i != usernames.end(); ++i) {
-//     send(ConnectFD, *i, sizeof(*i), 0);
-//   }
-// }
-
 
 /*----------- THREADS ------------*/
 //thread struct
@@ -73,7 +67,6 @@ char msg[1024];
 vector<string> users;
 //all chat rooms
 vector<chat_room> c_rooms;
-chat_room chat(users, "Chat A", 3);
 
 
 /*----------- THREAD HELPER METHOD ------------*/
@@ -121,12 +114,13 @@ void* handle_client(void* arg) {
       }
       else {
         sprintf(buff, "Welcome %s", t->name.c_str());
+        users.push_back(t->name); //add name to user list
         loggedin = true;
       }  
       send(t->ConnectFD, buff, sizeof(buff), 0);
     }
 
-    //else handle normal requests
+    //if loggedin, handle normal requests
     else {
 
       //rooms: show active rooms 
@@ -138,14 +132,15 @@ void* handle_client(void* arg) {
         else { //nonzero num rooms
           strcpy(buff, "Active rooms are:\r\n");
           send(t->ConnectFD, buff, sizeof(buff), 0);
-          // for(vector<chat_room>::const_iterator i = c_rooms.begin(); i != c_rooms.end(); ++i) {
-          //   strcpy(msg, *i->title.c_str());
-          //   send(ConnectFD, msg, sizeof(msg), 0);
-          // }
+          for(vector<chat_room>::const_iterator i = c_rooms.begin(); i != c_rooms.end(); ++i) {
+            memset(&buff, 0, sizeof(buff)); //clear message buffer
+            sprintf(buff, "* %s (%d)\r\n", i->get_title().c_str(), i->get_num_users());
+            send(t->ConnectFD, buff, sizeof(buff), 0);
+          }
         } 
       }
 
-      
+
 
       //quit: terminate command connection
       else if(strncmp(buff, "/quit", 5) == 0) {
@@ -187,6 +182,14 @@ int main(int argc, char** argv) {
   users.push_back("isaac\r\n");
   users.push_back("apollo\r\n");
   users.push_back("gizmo\r\n");
+  //fake chat rooms
+  chat_room chat1(users, "CR1");
+  chat_room chat2(users, "CR2");
+  chat_room chat3(users, "CR3");
+  c_rooms.push_back(chat1);
+  c_rooms.push_back(chat2);
+  c_rooms.push_back(chat3);
+
   
   //setup socket, IP, and ports
   struct sockaddr_in sa;
