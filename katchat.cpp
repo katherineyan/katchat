@@ -212,10 +212,12 @@ void* handle_client(void* arg) {
           memset(&buff, 0, sizeof(buff));
           strcpy(buff, "Server closing control connection.\r\n");
           send(t->ConnectFD, buff, sizeof(buff), 0);
+          // close(t->SocketFD);
+          // close(t->ConnectFD);
           // exit(EXIT_SUCCESS); !!!!!!!!!exits the server, need to exit client
         }
 
-        //attempt to leave
+        //leave: error message
         else if(strncmp(buff, "/leave", 6) == 0) {
           memset(&buff, 0, sizeof(buff));
           strcpy(buff, "You're not in a chat room right now.\r\n");
