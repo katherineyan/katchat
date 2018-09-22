@@ -109,7 +109,7 @@ void* handle_client(void* arg) {
       exit(EXIT_FAILURE);
     }
 
-    //get username if not loggedin
+    /*----------- NOT LOGGED IN ------------*/
     if (!loggedin) {
       t->name = string(buff); 
       if (count(users.begin(), users.end(), t->name)) {
@@ -123,10 +123,10 @@ void* handle_client(void* arg) {
       send(t->ConnectFD, buff, sizeof(buff), 0);
     }
 
-    //if loggedin, handle normal requests
+    /*----------- LOGGED IN ------------*/
     else {
 
-      //if we're in a chat room
+      /*----------- IN A CHAT ROOM ------------*/
       if (inchat) {
 
         //leave: leaving room
@@ -137,6 +137,12 @@ void* handle_client(void* arg) {
           sprintf(buff, "* user has left chat: %s", t->name.c_str()); //how to broadcast to whole chat?
           send(t->ConnectFD, buff, sizeof(buff), 0);
           inchat = false;
+        }
+
+        else if(strncmp(buff, "/join", 5) == 0) { 
+          memset(&buff, 0, sizeof(buff)); //clear message buffer
+          strcpy(buff, "You're already in a chat room\r\n");
+          send(t->ConnectFD, buff, sizeof(buff), 0);
         }
 
         //unknown command (starts with a "/")
@@ -154,7 +160,7 @@ void* handle_client(void* arg) {
 
       }
 
-      //if not in a chat room
+      /*----------- NOT IN A CHAT ROOM------------*/
       else {
 
         //rooms: show active rooms 
@@ -197,6 +203,14 @@ void* handle_client(void* arg) {
         else if(strncmp(buff, "/quit", 5) == 0) {
           memset(&buff, 0, sizeof(buff));
           strcpy(buff, "Server closing control connection.\r\n");
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+          // exit(EXIT_SUCCESS); !!!!!!!!!exits the server, need to exit client
+        }
+
+        //attempt to leave
+        else if(strncmp(buff, "/leave", 6) == 0) {
+          memset(&buff, 0, sizeof(buff));
+          strcpy(buff, "You're not in a chat room right now.\r\n");
           send(t->ConnectFD, buff, sizeof(buff), 0);
           // exit(EXIT_SUCCESS); !!!!!!!!!exits the server, need to exit client
         }
