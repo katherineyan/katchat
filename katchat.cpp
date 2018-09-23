@@ -240,6 +240,13 @@ void* handle_client(void* arg) {
           break;
         }
 
+        //help: show info
+        else if(strncmp(buff, "/help", 5) == 0) {
+          memset(&buff, 0, sizeof(buff));
+          sprintf(buff, "Username: %s.\r\nUse /rooms to see list of available chat rooms.\r\nUse /join to join a chat room.\r\nUse /quit to close the connection.\r\n", name.c_str());
+          send(ConnectFD, buff, sizeof(buff), 0);
+        }
+
         //leave: error message
         else if(strncmp(buff, "/leave", 6) == 0) {
           memset(&buff, 0, sizeof(buff));
@@ -290,6 +297,13 @@ void* handle_client(void* arg) {
         else if(strncmp(buff, "/rooms", 6) == 0) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
           strcpy(buff, "Leave the chat room to see all available rooms.\r\n");
+          send(ConnectFD, buff, sizeof(buff), 0);
+        }
+
+        //help: show help
+        else if(strncmp(buff, "/help", 5) == 0) { 
+          memset(&buff, 0, sizeof(buff));
+          sprintf(buff, "Username: %s.\r\nCurrent chat room: %s.\r\nStart typing to talk to other people in the chat!\r\nUse /leave to leave the chat room.\r\n", name.c_str(), currchat->get_title().c_str());
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
