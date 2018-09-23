@@ -32,17 +32,32 @@ class chat_room {
   vector<string> usernames;
   string title;
   int num_users;
+
 public:
   chat_room(vector<string> unames, string t): usernames(unames), title(t), num_users(unames.size()) {}
-  string get_title() const { return title;}
-  int get_num_users() const {return num_users;}
-  bool operator==(const chat_room & obj2) const
-  {
-    if(this->get_title().compare(obj2.get_title()) == 0)
-      return true;
-    else
-      return false;
+  chat_room(string t): title(t), num_users(0) {}
+  string get_title() const { return title; }
+  int get_num_users() const { return num_users; }
+  vector<string> get_usernames() const { return usernames; }
+  void add_user(string u) { 
+    usernames.push_back(u);
+    num_users += 1; 
   }
+  // bool operator==(const chat_room &a, const chat_room &b) {
+  //   return !a.get_title().compare(b.get_title());
+  // }
+};
+
+//to get a match on a chat room title
+struct MatchString
+{
+ MatchString(const std::string& s) : s_(s) {}
+ bool operator()(const chat_room& obj) const
+ {
+   return obj.get_title() == s_;
+ }
+ private:
+   const std::string& s_;
 };
 
 
@@ -85,7 +100,7 @@ void* handle_client(void* arg) {
   bool loggedin = false;
   //in chatroom or not
   bool inchat = false;
-  char* currchat;
+  chat_room* currchat;
 
   //send success message to client 
   strcpy(buff, "Welcome to katchat!\r\nPlease login to continue.\r\n");
@@ -128,8 +143,123 @@ void* handle_client(void* arg) {
     /*----------- LOGGED IN ------------*/
     else {
 
-      /*----------- IN A CHAT ROOM ------------*/
-      if (inchat) {
+      /*----------- NOT IN A CHAT ROOM ------------*/
+      if (!inchat) {
+
+        //rooms: show active rooms 
+        if(strncmp(buff, "/rooms", 6) == 0) {
+          //no rooms
+          if (c_rooms.empty()) { 
+            memset(&buff, 0, sizeof(buff));
+            strcpy(buff, "There are currently no active rooms.\r\n");
+            send(t->ConnectFD, buff, sizeof(buff), 0);
+          }
+          //rooms exist
+          else {
+            memset(&buff, 0, sizeof(buff));
+            strcpy(buff, "Active rooms are:\r\n");
+            send(t->ConnectFD, buff, sizeof(buff), 0);
+            for(vector<chat_room>::const_iterator i = c_rooms.begin(); i != c_rooms.end(); ++i) {
+              memset(&buff, 0, sizeof(buff)); //clear message buffer
+              sprintf(buff, "* %s (%d)\r\n", i->get_title().c_str(), i->get_num_users());
+              send(t->ConnectFD, buff, sizeof(buff), 0);
+            }
+            memset(&buff, 0, sizeof(buff)); //clear message buffer
+            strcpy(buff, "end of list\r\n");
+            send(t->ConnectFD, buff, sizeof(buff), 0);
+          } 
+        }
+
+        //join: join an active room
+        else if(strncmp(buff, "/join", 5) == 0) {
+          //get requested room name
+          string roomname = string(&buff[6]);
+          if (!roomname.empty()) {
+            roomname.erase(roomname.size() - 1);
+            roomname.erase(roomname.size() - 1);
+          }
+          //attempt to enter room
+          vector<chat_room>::iterator it = find_if(c_rooms.begin(), c_rooms.end(), MatchString(roomname));
+          if (it != c_rooms.end()) {
+            //update info about room
+            int index = distance(c_rooms.begin(), it);
+            currchat = &c_rooms[index];
+            currchat->add_user(t->name);
+            cout << currchat->get_title() << endl;
+            cout << currchat->get_num_users() << endl;
+            vector<string> temp = currchat->get_usernames();
+            for (vector<string>::const_iterator i = temp.begin(); i != temp.end(); ++i)
+              cout << *i << ' ';
+            //print all people in room
+            // for(vector<chat_room>::const_iterator i = c_rooms.begin(); i != c_rooms.end(); ++i) {
+            //   memset(&buff, 0, sizeof(buff)); //clear message buffer
+            //   sprintf(buff, "* %s (%d)\r\n", i->get_title().c_str(), i->get_num_users());
+            //   send(t->ConnectFD, buff, sizeof(buff), 0);
+            // }
+
+          }
+          //room doesn't exist
+          else {
+            memset(&buff, 0, sizeof(buff));
+            sprintf(buff, "Room %s doesn't exist.\r\n", roomname.c_str());
+            send(t->ConnectFD, buff, sizeof(buff), 0);
+          }
+
+          
+          // //attempt to enter room
+          // auto it = find_if(c_rooms.begin(), c_rooms.end(), [&roomname](chat_room curr) {
+          //   return !(curr.get_title() == roomname);
+          // });
+
+          // cout << it->get_title() << endl;
+
+
+
+          // vector<chat_room>::iterator it;
+          // it = find_if(c_rooms.begin(), c_rooms.end(), chat_room(string(roomname)));
+          // if(it != c_rooms.end()) { //enter
+          //   memset(&buff, 0, sizeof(buff));
+          //   sprintf(buff, "Entering room: %s", roomname);
+          //   send(t->ConnectFD, buff, sizeof(buff), 0);
+          //   inchat = true;
+          //   //enter room
+          //   //update list and num of people
+          //   //print list of people
+          // }
+
+
+
+
+        }
+
+        //quit: terminate connection
+        else if(strncmp(buff, "/quit", 5) == 0) {
+          memset(&buff, 0, sizeof(buff));
+          strcpy(buff, "Server closing control connection.\r\n");
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+          // close(t->SocketFD);
+          // close(t->ConnectFD);
+          // exit(EXIT_SUCCESS); !!!!!!!!!exits the server, need to exit client
+        }
+
+        //leave: error message
+        else if(strncmp(buff, "/leave", 6) == 0) {
+          memset(&buff, 0, sizeof(buff));
+          strcpy(buff, "You're not in a chat room right now.\r\n");
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+        }
+
+        //unknown command
+        else {
+          memset(&buff, 0, sizeof(buff));
+          strcpy(buff, "Unknown command.\r\n");
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+        }
+
+      }
+
+      /*----------- IN A CHAT ROOM------------*/
+      else {
 
         //leave: leaving room
         if(strncmp(buff, "/leave", 6) == 0) { 
@@ -162,84 +292,12 @@ void* handle_client(void* arg) {
           send(t->ConnectFD, buff, sizeof(buff), 0);
         }
 
-        //just saying stuff
-        else {
-          //need to broadcast to all chat????
-          int temp = 1;
-        }
-
-      }
-
-      /*----------- NOT IN A CHAT ROOM------------*/
-      else {
-
-        //rooms: show active rooms 
-        if(strncmp(buff, "/rooms", 6) == 0) {
-          if (c_rooms.empty()) { //no rooms
-            memset(&buff, 0, sizeof(buff));
-            strcpy(buff, "There are currently no active rooms.\r\n");
-            send(t->ConnectFD, buff, sizeof(buff), 0);
-          }
-          else {
-            memset(&buff, 0, sizeof(buff));
-            strcpy(buff, "Active rooms are:\r\n");
-            send(t->ConnectFD, buff, sizeof(buff), 0);
-            for(vector<chat_room>::const_iterator i = c_rooms.begin(); i != c_rooms.end(); ++i) {
-              memset(&buff, 0, sizeof(buff)); //clear message buffer
-              sprintf(buff, "* %s (%d)\r\n", i->get_title().c_str(), i->get_num_users());
-              send(t->ConnectFD, buff, sizeof(buff), 0);
-            }
-            memset(&buff, 0, sizeof(buff)); //clear message buffer
-            strcpy(buff, "end of list\r\n");
-            send(t->ConnectFD, buff, sizeof(buff), 0);
-          } 
-        }
-
-        //join: join an active room
-        else if(strncmp(buff, "/join", 5) == 0) {
-          currchat = &buff[6];
-          cout << currchat << endl;
-          //check if room exists
-          // if(count( currchat) == 0) {
-          //   strcpy(buff, "Sorry, room doesn't exist\r\n");
-          // }
-          // else {
-          //   sprintf(buff, "Entering room: %s", currchat);
-          //   inchat = true;
-          // }
-          //enter room
-          memset(&buff, 0, sizeof(buff));
-          sprintf(buff, "entering room: %s", currchat);
-          send(t->ConnectFD, buff, sizeof(buff), 0);
-          //update list and num of people
-          //print list of people
-
-        }
-
-        //quit: terminate connection
-        else if(strncmp(buff, "/quit", 5) == 0) {
-          memset(&buff, 0, sizeof(buff));
-          strcpy(buff, "Server closing control connection.\r\n");
-          send(t->ConnectFD, buff, sizeof(buff), 0);
-          // close(t->SocketFD);
-          // close(t->ConnectFD);
-          // exit(EXIT_SUCCESS); !!!!!!!!!exits the server, need to exit client
-        }
-
-        //leave: error message
-        else if(strncmp(buff, "/leave", 6) == 0) {
-          memset(&buff, 0, sizeof(buff));
-          strcpy(buff, "You're not in a chat room right now.\r\n");
-          send(t->ConnectFD, buff, sizeof(buff), 0);
-        }
-
-        //unknown command
-        else {
-          memset(&buff, 0, sizeof(buff));
-          strcpy(buff, "Unknown command.\r\n");
-          send(t->ConnectFD, buff, sizeof(buff), 0);
-        }
-
+        // //just saying stuff
+        // else {
+        //   //need to broadcast to all chat????
+        //   int temp = 1;
+        // }
+        
       }
     }
   }
@@ -307,11 +365,11 @@ int main(int argc, char** argv) {
   }
   
   //bind socket to local address
-  int bindStatus = bind(SocketFD,(struct sockaddr *)&sa, sizeof(sa));
-  if (bindStatus < 0) {
-  	perror("Error binding socket.");
-  	exit(EXIT_FAILURE);
-  }
+  if (bind(SocketFD,(struct sockaddr *)&sa, sizeof sa) < 0) {
+      perror("Error, binding failed.");
+      close(SocketFD);
+      exit(EXIT_FAILURE);
+    }
 
   //listen for incoming connections
   if (listen(SocketFD, 10) < 0) {
