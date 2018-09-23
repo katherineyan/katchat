@@ -238,9 +238,7 @@ void* handle_client(void* arg) {
           memset(&buff, 0, sizeof(buff));
           strcpy(buff, "Server closing control connection.\r\n");
           send(ConnectFD, buff, sizeof(buff), 0);
-          // close(t->SocketFD);
-          // close(t->ConnectFD);
-          // exit(EXIT_SUCCESS); !!!!!!!!!exits the server, need to exit client
+          close(ConnectFD);
           break;
         }
 
@@ -311,12 +309,20 @@ void* handle_client(void* arg) {
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
-        // //just saying stuff
-        // else {
-        //   //need to broadcast to all chat????
-        //   int temp = 1;
-        // }
-        
+        //just saying stuff
+        else {
+          //create message
+          char buff2[1024];
+          strcpy(buff2, buff);
+          memset(&buff, 0, sizeof(buff));
+          sprintf(buff, "%s: %s", name.c_str(), buff2);
+          //send enter message to other clients in room
+          vector<int> fds = currchat->get_fds();
+          for(vector<int>::iterator i = fds.begin(); i != fds.end(); ++i) {
+            //messsage buffer
+            send(*i, buff, sizeof(buff), 0);
+          }
+        }
       }
     }
   }
@@ -411,44 +417,11 @@ int main(int argc, char** argv) {
   		exit(EXIT_FAILURE);
     } 
 
+    //create threads for each connection
     pthread_t thread;
-    // thread_arg arg;
-    // arg.id = 0;
-    // arg.SocketFD = SocketFD;
-    // arg.ConnectFD = ConnectFD;
     pthread_create(&thread, NULL, handle_client, (void*) ConnectFD);
 
-    // // create new thread for the connection
-    // if (CURR_NUM_CLIENTS < MAX_NUM_CLIENTS - 1) {
-    //   arg[CURR_NUM_CLIENTS].id = CURR_NUM_CLIENTS;
-    //   arg[CURR_NUM_CLIENTS].SocketFD = SocketFD;
-    //   arg[CURR_NUM_CLIENTS].ConnectFD = ConnectFD;
-    //   pthread_create(&threads[CURR_NUM_CLIENTS], NULL, handle_client, &arg[CURR_NUM_CLIENTS]);
-    //   CURR_NUM_CLIENTS += 1;
-    // }
-    // //else if we've reached the max number of people
-    // else {
-    //   strcpy(msg, "Sorry, the max number of people on katchat has been reached.\r\n");
-    //   int retval = send(ConnectFD, msg, strlen(msg), 0);
-    //   if (retval < 0) {
-    //     perror("Error, send failed.\r\n");
-    //     close(ConnectFD);
-    //     close(SocketFD);
-    //     exit(EXIT_FAILURE);
-    //   }
-    // }
-
-    // //wait for all threads
-    // for (int c = 0; c < CURR_NUM_CLIENTS + 1; c++) {
-    //   pthread_join(threads[c], NULL);
-    //   close(arg[c].ConnectFD);
-    // }
-    // pthread_join(thread, NULL);
-    // close(ConnectFD);
-
   }
-
-  
 
   // Close sockets and kill thread
   close(SocketFD);
