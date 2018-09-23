@@ -99,3 +99,12 @@ All commands begin with a forward slash "/".
 #### Chatting:
 
 Use ```/join``` to join a chat room and just start talking! Use ```/leave``` to leave the room when you're done.
+
+Try typing "katchat" in a chat room!
+
+
+
+
+
+
+

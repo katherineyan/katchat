@@ -87,7 +87,6 @@ void* handle_client(void* arg) {
 
   //cast to thread_arg 
   int ConnectFD = (intptr_t) arg;
-  cout << ConnectFD << endl;
 
   //name of user
   string name;
@@ -154,7 +153,6 @@ void* handle_client(void* arg) {
 
         //rooms: show active rooms 
         if(strncmp(buff, "/rooms", 6) == 0) {
-          send(5, "hey there", strlen("hey there"), 0);
           //no rooms
           if (c_rooms.empty()) { 
             memset(&buff, 0, sizeof(buff));
@@ -311,16 +309,23 @@ void* handle_client(void* arg) {
 
         //just saying stuff
         else {
-          //create message
+          //copy message and get fds
           char buff2[1024];
           strcpy(buff2, buff);
+          vector<int> fds = currchat->get_fds();
+          //send enter message to other clients in room
           memset(&buff, 0, sizeof(buff));
           sprintf(buff, "%s: %s", name.c_str(), buff2);
-          //send enter message to other clients in room
-          vector<int> fds = currchat->get_fds();
           for(vector<int>::iterator i = fds.begin(); i != fds.end(); ++i) {
-            //messsage buffer
             send(*i, buff, sizeof(buff), 0);
+          }
+          //katchat cat
+          if (strncmp(buff2, "katchat", 7) == 0){
+            for(vector<int>::iterator i = fds.begin(); i != fds.end(); ++i) {
+              memset(&buff, 0, sizeof(buff));
+              strcpy(buff, "[^._.^]ﾉ彡 meow\r\n");
+              send(*i, buff, sizeof(buff), 0);
+            }
           }
         }
       }
