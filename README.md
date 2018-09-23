@@ -80,7 +80,7 @@ Each client must give a unique username in order to log into katchat.
 Trying 127.0.0.1...
 Connected to localhost.
 Escape character is '^]'.
-Welcome to katchat! [^._.^]ﾉ彡
+[^._.^]ﾉ彡 Welcome to katchat!
 Please enter a username.
 > katherine
 Sorry, username taken.
