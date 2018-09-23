@@ -43,15 +43,18 @@ public:
   vector<string> get_usernames() const { return usernames; }
   vector<int> get_fds() const { return fds; }
   //methods
-  int add_user(string u, int fd) { 
+  int add_user_name(string u) { 
     usernames.push_back(u);
-    fds.push_back(fd);
     num_users += 1; 
     return usernames.size() - 1;
   }
-  void remove_user(int index) {
-    usernames.erase(usernames.begin() + index);
-    fds.erase(fds.begin() + index);
+  int add_user_fd(int fd) {
+    fds.push_back(fd);
+    return fds.size() - 1;
+  }
+  void remove_user(int i1, int i2) {
+    usernames.erase(usernames.begin() + i1);
+    fds.erase(fds.begin() + i2);
     num_users -= 1;
   }
 };
@@ -96,6 +99,8 @@ void* handle_client(void* arg) {
   bool inchat = false;
   //index of user within chatroom usernames vector
   int chat_index;
+  //index of user within chatroom fds vector
+  int fd_index;
   //pointer to chatroom youre in
   chat_room* currchat;
 
@@ -198,7 +203,8 @@ void* handle_client(void* arg) {
               send(*i, buff, sizeof(buff), 0);
             }
             //add new user to the chat_room object
-            chat_index = currchat->add_user(name, ConnectFD);
+            chat_index = currchat->add_user_name(name);
+            fd_index = currchat->add_user_fd(ConnectFD);
             inchat = true;
             //print all people in room
             vector<string> temp = currchat->get_usernames();
@@ -259,10 +265,21 @@ void* handle_client(void* arg) {
 
         //leave: leaving room
         if(strncmp(buff, "/leave", 6) == 0) { 
-          currchat->remove_user(chat_index);
-          memset(&buff, 0, sizeof(buff)); //clear message buffer
-          sprintf(buff, "* user has left chat: %s\r\n", name.c_str()); //how to broadcast to whole chat?
-          send(ConnectFD, buff, sizeof(buff), 0);
+          //send messsage about leaving
+          vector<int> fds = currchat->get_fds();
+          for(vector<int>::iterator i = fds.begin(); i != fds.end(); ++i) {
+            if(*i == ConnectFD) { //if its you
+              memset(&buff, 0, sizeof(buff));
+              sprintf(buff, "* user has left chat: %s (**this is you)\r\n", name.c_str());
+              send(ConnectFD, buff, sizeof(buff), 0);
+            }
+            else {
+              memset(&buff, 0, sizeof(buff)); //if its not you
+              sprintf(buff, "* user has left chat: %s\r\n", name.c_str());
+              send(*i, buff, sizeof(buff), 0);
+            } 
+          }
+          currchat->remove_user(chat_index, fd_index);
           inchat = false;
         }
 
