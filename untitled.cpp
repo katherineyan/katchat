@@ -30,30 +30,27 @@ using namespace std;
 //chat room class
 class chat_room {
   vector<string> usernames;
-  vector<int> fds;
   string title;
   int num_users;
+
 public:
-  //constructors
-  chat_room(vector<string> unames, vector<int> f, string t): usernames(unames), fds(f), title(t), num_users(unames.size()) {}
+  chat_room(vector<string> unames, string t): usernames(unames), title(t), num_users(unames.size()) {}
   chat_room(string t): title(t), num_users(0) {}
-  //getters
   string get_title() const { return title; }
   int get_num_users() const { return num_users; }
   vector<string> get_usernames() const { return usernames; }
-  vector<int> get_fds() const { return fds; }
-  //methods
-  int add_user(string u, int fd) { 
+  int add_user(string u) { 
     usernames.push_back(u);
-    fds.push_back(fd);
     num_users += 1; 
     return usernames.size() - 1;
   }
   void remove_user(int index) {
     usernames.erase(usernames.begin() + index);
-    fds.erase(fds.begin() + index);
     num_users -= 1;
   }
+  // bool operator==(const chat_room &a, const chat_room &b) {
+  //   return !a.get_title().compare(b.get_title());
+  // }
 };
 
 //to get a match on a chat room title
@@ -67,6 +64,22 @@ struct MatchString
  private:
    const std::string& s_;
 };
+
+
+/*----------- THREADS ------------*/
+//thread struct
+struct thread_arg {
+  string name;
+  int id;
+  int SocketFD;
+  int ConnectFD;
+};
+
+//hold the threads and thread_args of each client connection
+int MAX_NUM_CLIENTS = 1000;
+int CURR_NUM_CLIENTS = 0;
+thread_arg arg[1000];
+pthread_t threads[1000];
 
 
 /*----------- OTHER GLOBAL VARIABLES ------------*/
@@ -83,11 +96,9 @@ vector<chat_room> c_rooms;
 void* handle_client(void* arg) {
 
   //cast to thread_arg 
-  int ConnectFD = (intptr_t) arg;
-  cout << ConnectFD << endl;
+  thread_arg* t = (thread_arg*) arg;
+  cout << t->Connect << endl;
 
-  //name of user
-  string name;
   //messsage buffer
   char buff[1024];
   //logged in or not
@@ -101,10 +112,11 @@ void* handle_client(void* arg) {
 
   //send success message to client 
   strcpy(buff, "Welcome to katchat! [^._.^]ﾉ彡\r\nPlease enter a username.\r\n");
-  int retval = send(ConnectFD, buff, strlen(buff), 0);
+  int retval = send(t->ConnectFD, buff, strlen(buff), 0);
   if (retval < 0) {
     perror("Error, send failed.");
-    close(ConnectFD);
+    close(t->ConnectFD);
+    close(t->SocketFD);
     exit(EXIT_FAILURE);
   }
 
@@ -114,10 +126,11 @@ void* handle_client(void* arg) {
 
     //read message from client to get username
     memset(&buff, 0, sizeof(buff)); //clear message buffer
-    retval = recv(ConnectFD, buff, sizeof(buff), 0);
+    retval = recv(t->ConnectFD, buff, sizeof(buff), 0);
     if (retval == -1) {
       perror("Error, reading failed.");
-      close(ConnectFD);
+      close(t->ConnectFD);
+      close(t->SocketFD);
       exit(EXIT_FAILURE);
     }
 
@@ -128,17 +141,17 @@ void* handle_client(void* arg) {
         n.erase(n.size() - 1);
         n.erase(n.size() - 1);
       }
-      name = n;
+      t->name = n;
           
-      if (count(users.begin(), users.end(), name)) {
+      if (count(users.begin(), users.end(), t->name)) {
         strcpy(buff, "Sorry, username taken.\r\n");
       }
       else {
-        sprintf(buff, "Welcome %s.\r\n", name.c_str());
-        users.push_back(name); //add name to user list
+        sprintf(buff, "Welcome %s.\r\n", t->name.c_str());
+        users.push_back(t->name); //add name to user list
         loggedin = true;
       }  
-      send(ConnectFD, buff, sizeof(buff), 0);
+      send(t->ConnectFD, buff, sizeof(buff), 0);
     }
 
     /*----------- LOGGED IN ------------*/
@@ -149,26 +162,25 @@ void* handle_client(void* arg) {
 
         //rooms: show active rooms 
         if(strncmp(buff, "/rooms", 6) == 0) {
-          send(5, "hey there", strlen("hey there"), 0);
           //no rooms
           if (c_rooms.empty()) { 
             memset(&buff, 0, sizeof(buff));
             strcpy(buff, "There are currently no active rooms.\r\n");
-            send(ConnectFD, buff, sizeof(buff), 0);
+            send(t->ConnectFD, buff, sizeof(buff), 0);
           }
           //rooms exist
           else {
             memset(&buff, 0, sizeof(buff));
             strcpy(buff, "Active rooms are:\r\n");
-            send(ConnectFD, buff, sizeof(buff), 0);
+            send(t->ConnectFD, buff, sizeof(buff), 0);
             for(vector<chat_room>::const_iterator i = c_rooms.begin(); i != c_rooms.end(); ++i) {
               memset(&buff, 0, sizeof(buff)); //clear message buffer
               sprintf(buff, "* %s (%d)\r\n", i->get_title().c_str(), i->get_num_users());
-              send(ConnectFD, buff, sizeof(buff), 0);
+              send(t->ConnectFD, buff, sizeof(buff), 0);
             }
             memset(&buff, 0, sizeof(buff)); //clear message buffer
             strcpy(buff, "end of list\r\n");
-            send(ConnectFD, buff, sizeof(buff), 0);
+            send(t->ConnectFD, buff, sizeof(buff), 0);
           } 
         }
 
@@ -182,48 +194,40 @@ void* handle_client(void* arg) {
           }
           //attempt to enter room
           vector<chat_room>::iterator it = find_if(c_rooms.begin(), c_rooms.end(), MatchString(roomname));
-          if (it != c_rooms.end()) {  //if we can enter the room
-            //send success message to client
-            memset(&buff, 0, sizeof(buff));
-            sprintf(buff, "entering room: %s\r\n", roomname.c_str());
-            send(ConnectFD, buff, sizeof(buff), 0);
-            //set currchat to point to room
+          if (it != c_rooms.end()) {
+            //success message !!!!!!! must broadcast to entire room
+            memset(&buff, 0, sizeof(buff)); 
+            sprintf(buff, "entering room: %s\r\n", t->name.c_str());
+            send(t->ConnectFD, buff, sizeof(buff), 0);
+            //update info about room
             int index = distance(c_rooms.begin(), it);
             currchat = &c_rooms[index];
-            //send enter message to other clients in room
-            vector<int> fds = currchat->get_fds();
-            for(vector<int>::iterator i = fds.begin(); i != fds.end(); ++i) {
-              memset(&buff, 0, sizeof(buff)); 
-              sprintf(buff, "* new user joined chat: %s\r\n", name.c_str());
-              send(*i, buff, sizeof(buff), 0);
-            }
-            //add new user to the chat_room object
-            chat_index = currchat->add_user(name, ConnectFD);
+            chat_index = currchat->add_user(t->name);
             inchat = true;
             //print all people in room
             vector<string> temp = currchat->get_usernames();
             for(vector<string>::const_iterator i = temp.begin(); i != temp.end(); ++i) {
-              if(i->compare(name)) { //if its you
+              if(i->compare(t->name)) { //if its you
                 memset(&buff, 0, sizeof(buff));
                 sprintf(buff, "* %s\r\n", i->c_str());
-                send(ConnectFD, buff, sizeof(buff), 0);
+                send(t->ConnectFD, buff, sizeof(buff), 0);
               }
               else {
                 memset(&buff, 0, sizeof(buff)); //if its not you
                 sprintf(buff, "* %s (**this is you)\r\n", i->c_str());
-                send(ConnectFD, buff, sizeof(buff), 0);
+                send(t->ConnectFD, buff, sizeof(buff), 0);
               }      
             }
             //end of list
             memset(&buff, 0, sizeof(buff)); 
             strcpy(buff, "end of list\r\n");
-            send(ConnectFD, buff, sizeof(buff), 0);
+            send(t->ConnectFD, buff, sizeof(buff), 0);
           }
           //room doesn't exist
           else {
             memset(&buff, 0, sizeof(buff));
             sprintf(buff, "Room %s doesn't exist.\r\n", roomname.c_str());
-            send(ConnectFD, buff, sizeof(buff), 0);
+            send(t->ConnectFD, buff, sizeof(buff), 0);
           }
         }
 
@@ -231,7 +235,7 @@ void* handle_client(void* arg) {
         else if(strncmp(buff, "/quit", 5) == 0) {
           memset(&buff, 0, sizeof(buff));
           strcpy(buff, "Server closing control connection.\r\n");
-          send(ConnectFD, buff, sizeof(buff), 0);
+          send(t->ConnectFD, buff, sizeof(buff), 0);
           // close(t->SocketFD);
           // close(t->ConnectFD);
           // exit(EXIT_SUCCESS); !!!!!!!!!exits the server, need to exit client
@@ -242,14 +246,14 @@ void* handle_client(void* arg) {
         else if(strncmp(buff, "/leave", 6) == 0) {
           memset(&buff, 0, sizeof(buff));
           strcpy(buff, "You're not in a chat room right now.\r\n");
-          send(ConnectFD, buff, sizeof(buff), 0);
+          send(t->ConnectFD, buff, sizeof(buff), 0);
         }
 
         //unknown command
         else {
           memset(&buff, 0, sizeof(buff));
           strcpy(buff, "Unknown command.\r\n");
-          send(ConnectFD, buff, sizeof(buff), 0);
+          send(t->ConnectFD, buff, sizeof(buff), 0);
         }
 
       }
@@ -261,8 +265,8 @@ void* handle_client(void* arg) {
         if(strncmp(buff, "/leave", 6) == 0) { 
           currchat->remove_user(chat_index);
           memset(&buff, 0, sizeof(buff)); //clear message buffer
-          sprintf(buff, "* user has left chat: %s\r\n", name.c_str()); //how to broadcast to whole chat?
-          send(ConnectFD, buff, sizeof(buff), 0);
+          sprintf(buff, "* user has left chat: %s\r\n", t->name.c_str()); //how to broadcast to whole chat?
+          send(t->ConnectFD, buff, sizeof(buff), 0);
           inchat = false;
         }
 
@@ -270,28 +274,28 @@ void* handle_client(void* arg) {
         else if(strncmp(buff, "/join", 5) == 0) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
           strcpy(buff, "You're already in a chat room.\r\n");
-          send(ConnectFD, buff, sizeof(buff), 0);
+          send(t->ConnectFD, buff, sizeof(buff), 0);
         }
 
         //rooms: error 
         else if(strncmp(buff, "/rooms", 6) == 0) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
           strcpy(buff, "Leave the chat room to see all available rooms.\r\n");
-          send(ConnectFD, buff, sizeof(buff), 0);
+          send(t->ConnectFD, buff, sizeof(buff), 0);
         }
 
         //quit: error
         else if(strncmp(buff, "/quit", 5) == 0) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
           strcpy(buff, "You must exit the room before you quit.\r\n");
-          send(ConnectFD, buff, sizeof(buff), 0);
+          send(t->ConnectFD, buff, sizeof(buff), 0);
         }
 
         //unknown command (starts with a "/")
         else if (strncmp(buff, "/", 1) == 0){
           memset(&buff, 0, sizeof(buff));
           strcpy(buff, "Unknown command.\r\n");
-          send(ConnectFD, buff, sizeof(buff), 0);
+          send(t->ConnectFD, buff, sizeof(buff), 0);
         }
 
         // //just saying stuff
@@ -310,9 +314,6 @@ void* handle_client(void* arg) {
 int main(int argc, char** argv) {
 
   /*----------- BASE USERS AND ROOMS ------------*/
-  //empty vector
-  vector<int> fds;
-  fds.push_back(-1);
   //fake lists for rooms
   vector<string> users1;
   vector<string> users2;
@@ -339,18 +340,18 @@ int main(int argc, char** argv) {
   users.push_back("gizmo");
   users2.push_back("gizmo");
   //fake chat rooms
-  chat_room chat1(users1, fds, "chatty_kathy");
-  chat_room chat2(users2, fds, "hottub");
-  chat_room chat3(users3, fds, "super_smash_bros");
+  chat_room chat1(users1, "chatty_kathy");
+  chat_room chat2(users2, "hottub");
+  chat_room chat3(users3, "super_smash_bros");
   c_rooms.push_back(chat1);
   c_rooms.push_back(chat2);
   c_rooms.push_back(chat3);
 
 
-	/*----------- SETUP ------------*/
-	//make sure to get port number
-	if(argc != 2) {
-	perror("Error, no port provided.\r\n");
+    /*----------- SETUP ------------*/
+    //make sure to get port number
+    if(argc != 2) {
+    perror("Error, no port provided.\r\n");
       exit(0);
   }
   int port = atoi(argv[1]);
@@ -365,8 +366,8 @@ int main(int argc, char** argv) {
   //create socket
   int SocketFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (SocketFD < 0) {
-  	perror("Error creating server socket.\r\n");
-  	exit(EXIT_FAILURE);
+    perror("Error creating server socket.\r\n");
+    exit(EXIT_FAILURE);
   }
   
   //bind socket to local address
@@ -386,40 +387,40 @@ int main(int argc, char** argv) {
   /*----------- LOOP CONTINOUSLY TO LISTEN FOR CLIENTS ------------*/
   for (;;) {
 
-  	//accept to initialize connection
-  	int ConnectFD = accept(SocketFD, NULL, NULL);
-  	if (0 > ConnectFD) {
-  		perror("Error, accept failed.\r\n");
-  		close(SocketFD);
-  		exit(EXIT_FAILURE);
+    //accept to initialize connection
+    int ConnectFD = accept(SocketFD, NULL, NULL);
+    if (0 > ConnectFD) {
+        perror("Error, accept failed.\r\n");
+        close(SocketFD);
+        exit(EXIT_FAILURE);
     } 
 
-    pthread_t thread;
+    // pthread_t thread;
     // thread_arg arg;
     // arg.id = 0;
     // arg.SocketFD = SocketFD;
     // arg.ConnectFD = ConnectFD;
-    pthread_create(&thread, NULL, handle_client, (void*) ConnectFD);
+    // pthread_create(&thread, NULL, handle_client, &arg);
 
-    // // create new thread for the connection
-    // if (CURR_NUM_CLIENTS < MAX_NUM_CLIENTS - 1) {
-    //   arg[CURR_NUM_CLIENTS].id = CURR_NUM_CLIENTS;
-    //   arg[CURR_NUM_CLIENTS].SocketFD = SocketFD;
-    //   arg[CURR_NUM_CLIENTS].ConnectFD = ConnectFD;
-    //   pthread_create(&threads[CURR_NUM_CLIENTS], NULL, handle_client, &arg[CURR_NUM_CLIENTS]);
-    //   CURR_NUM_CLIENTS += 1;
-    // }
-    // //else if we've reached the max number of people
-    // else {
-    //   strcpy(msg, "Sorry, the max number of people on katchat has been reached.\r\n");
-    //   int retval = send(ConnectFD, msg, strlen(msg), 0);
-    //   if (retval < 0) {
-    //     perror("Error, send failed.\r\n");
-    //     close(ConnectFD);
-    //     close(SocketFD);
-    //     exit(EXIT_FAILURE);
-    //   }
-    // }
+    // create new thread for the connection
+    if (CURR_NUM_CLIENTS < MAX_NUM_CLIENTS - 1) {
+      arg[CURR_NUM_CLIENTS].id = CURR_NUM_CLIENTS;
+      arg[CURR_NUM_CLIENTS].SocketFD = SocketFD;
+      arg[CURR_NUM_CLIENTS].ConnectFD = ConnectFD;
+      pthread_create(&threads[CURR_NUM_CLIENTS], NULL, handle_client, &arg[CURR_NUM_CLIENTS]);
+      CURR_NUM_CLIENTS += 1;
+    }
+    //else if we've reached the max number of people
+    else {
+      strcpy(msg, "Sorry, the max number of people on katchat has been reached.\r\n");
+      int retval = send(ConnectFD, msg, strlen(msg), 0);
+      if (retval < 0) {
+        perror("Error, send failed.\r\n");
+        close(ConnectFD);
+        close(SocketFD);
+        exit(EXIT_FAILURE);
+      }
+    }
 
     // //wait for all threads
     // for (int c = 0; c < CURR_NUM_CLIENTS + 1; c++) {
