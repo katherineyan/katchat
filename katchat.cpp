@@ -128,12 +128,18 @@ void* handle_client(void* arg) {
 
     /*----------- NOT LOGGED IN ------------*/
     if (!loggedin) {
-      t->name = string(buff); 
+      string n = string(buff); 
+      if (!n.empty()) {
+        n.erase(n.size() - 1);
+        n.erase(n.size() - 1);
+      }
+      t->name = n;
+          
       if (count(users.begin(), users.end(), t->name)) {
         strcpy(buff, "Sorry, username taken.\r\n");
       }
       else {
-        sprintf(buff, "Welcome %s", t->name.c_str());
+        sprintf(buff, "Welcome %s\r\n", t->name.c_str());
         users.push_back(t->name); //add name to user list
         loggedin = true;
       }  
@@ -185,17 +191,24 @@ void* handle_client(void* arg) {
             int index = distance(c_rooms.begin(), it);
             currchat = &c_rooms[index];
             currchat->add_user(t->name);
-            cout << currchat->get_title() << endl;
-            cout << currchat->get_num_users() << endl;
-            vector<string> temp = currchat->get_usernames();
-            for (vector<string>::const_iterator i = temp.begin(); i != temp.end(); ++i)
-              cout << *i << ' ';
             //print all people in room
-            // for(vector<chat_room>::const_iterator i = c_rooms.begin(); i != c_rooms.end(); ++i) {
-            //   memset(&buff, 0, sizeof(buff)); //clear message buffer
-            //   sprintf(buff, "* %s (%d)\r\n", i->get_title().c_str(), i->get_num_users());
-            //   send(t->ConnectFD, buff, sizeof(buff), 0);
-            // }
+            vector<string> temp = currchat->get_usernames();
+            for(vector<string>::const_iterator i = temp.begin(); i != temp.end(); ++i) {
+              memset(&buff, 0, sizeof(buff)); //clear message buffer
+              sprintf(buff, "* %s (**this is you)\r\n", i->c_str());
+              send(t->ConnectFD, buff, sizeof(buff), 0);
+              // if (*i == t->name) { //if it's yourself
+              //   memset(&buff, 0, sizeof(buff)); //clear message buffer
+              //   sprintf(buff, "* %hhd\r\n", *i->c_str());
+              //   send(t->ConnectFD, buff, sizeof(buff), 0);
+              // }
+              // else { //if it's someone else
+              //   memset(&buff, 0, sizeof(buff)); //clear message buffer
+              //   sprintf(buff, "* %hhd (**this is you)\r\n", *i->c_str());
+              //   send(t->ConnectFD, buff, sizeof(buff), 0);
+              // }
+              
+            }
 
           }
           //room doesn't exist
@@ -266,7 +279,7 @@ void* handle_client(void* arg) {
           //edit room variables
 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
-          sprintf(buff, "* user has left chat: %s", t->name.c_str()); //how to broadcast to whole chat?
+          sprintf(buff, "* user has left chat: %s\r\n", t->name.c_str()); //how to broadcast to whole chat?
           send(t->ConnectFD, buff, sizeof(buff), 0);
           inchat = false;
         }
@@ -313,26 +326,26 @@ int main(int argc, char** argv) {
   vector<string> users2;
   vector<string> users3;
   //fake users
-  users.push_back("katherine\r\n");
-  users1.push_back("katherine\r\n");
-  users.push_back("mario\r\n");
-  users3.push_back("mario\r\n");
-  users.push_back("gh\r\n");
-  users2.push_back("gh\r\n");
-  users.push_back("luigi\r\n");
-  users3.push_back("luigi\r\n");
-  users.push_back("bowser\r\n");
-  users3.push_back("bowser\r\n");
-  users.push_back("link\r\n");
-  users3.push_back("link\r\n");
-  users.push_back("zelda\r\n");
-  users3.push_back("zelda\r\n");
-  users.push_back("isaac\r\n");
-  users2.push_back("isaac\r\n");
-  users.push_back("apollo\r\n");
-  users2.push_back("apollo\r\n");
-  users.push_back("gizmo\r\n");
-  users2.push_back("gizmo\r\n");
+  users.push_back("katherine");
+  users1.push_back("katherine");
+  users.push_back("mario");
+  users3.push_back("mario");
+  users.push_back("gh");
+  users2.push_back("gh");
+  users.push_back("luigi");
+  users3.push_back("luigi");
+  users.push_back("bowser");
+  users3.push_back("bowser");
+  users.push_back("link");
+  users3.push_back("link");
+  users.push_back("zelda");
+  users3.push_back("zelda");
+  users.push_back("isaac");
+  users2.push_back("isaac");
+  users.push_back("apollo");
+  users2.push_back("apollo");
+  users.push_back("gizmo");
+  users2.push_back("gizmo");
   //fake chat rooms
   chat_room chat1(users1, "chatty_kathy");
   chat_room chat2(users2, "hottub");
@@ -345,7 +358,7 @@ int main(int argc, char** argv) {
 	/*----------- SETUP ------------*/
 	//make sure to get port number
 	if(argc != 2) {
-	perror("Error, no port provided.");
+	perror("Error, no port provided.\r\n");
       exit(0);
   }
   int port = atoi(argv[1]);
@@ -360,20 +373,20 @@ int main(int argc, char** argv) {
   //create socket
   int SocketFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (SocketFD < 0) {
-  	perror("Error creating server socket.");
+  	perror("Error creating server socket.\r\n");
   	exit(EXIT_FAILURE);
   }
   
   //bind socket to local address
   if (bind(SocketFD,(struct sockaddr *)&sa, sizeof sa) < 0) {
-      perror("Error, binding failed.");
+      perror("Error, binding failed.\r\n");
       close(SocketFD);
       exit(EXIT_FAILURE);
     }
 
   //listen for incoming connections
   if (listen(SocketFD, 10) < 0) {
-    perror("Error listening for connection.");
+    perror("Error listening for connection.\r\n");
     close(SocketFD);
     exit(EXIT_FAILURE);
   }
@@ -384,7 +397,7 @@ int main(int argc, char** argv) {
   	//accept to initialize connection
   	int ConnectFD = accept(SocketFD, NULL, NULL);
   	if (0 > ConnectFD) {
-  		perror("Error, accept failed.");
+  		perror("Error, accept failed.\r\n");
   		close(SocketFD);
   		exit(EXIT_FAILURE);
     } 
@@ -402,7 +415,7 @@ int main(int argc, char** argv) {
       strcpy(msg, "Sorry, the max number of people on katchat has been reached.\r\n");
       int retval = send(ConnectFD, msg, strlen(msg), 0);
       if (retval < 0) {
-        perror("Error, send failed.");
+        perror("Error, send failed.\r\n");
         close(ConnectFD);
         close(SocketFD);
         exit(EXIT_FAILURE);
