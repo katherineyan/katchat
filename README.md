@@ -97,7 +97,7 @@ All commands begin with a forward slash "/".
 
 #### Chatting:
 
-Use ```/join``` to join a chat room and just start talking!
+Use ```/join``` to join a chat room and just start talking! Use ```/leave``` to leave the room when you're done.
 
 #### Limitations:
 - ```MAX_NUM_CLIENTS```: indicates the max number of client connections at one time. Set at 1000.
