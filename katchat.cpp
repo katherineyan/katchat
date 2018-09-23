@@ -111,7 +111,7 @@ void* handle_client(void* arg) {
   chat_room* currchat;
 
   //send success message to client 
-  strcpy(buff, "Welcome to katchat! [^._.^]ﾉ彡\r\nPlease login to continue.\r\n");
+  strcpy(buff, "Welcome to katchat! [^._.^]ﾉ彡\r\nPlease enter a username.\r\n");
   int retval = send(t->ConnectFD, buff, strlen(buff), 0);
   if (retval < 0) {
     perror("Error, send failed.");
@@ -147,7 +147,7 @@ void* handle_client(void* arg) {
         strcpy(buff, "Sorry, username taken.\r\n");
       }
       else {
-        sprintf(buff, "Welcome %s\r\n", t->name.c_str());
+        sprintf(buff, "Welcome %s.\r\n", t->name.c_str());
         users.push_back(t->name); //add name to user list
         loggedin = true;
       }  
@@ -269,10 +269,17 @@ void* handle_client(void* arg) {
           inchat = false;
         }
 
-        //join/rooms: error 
-        else if((strncmp(buff, "/join", 5) == 0) || (strncmp(buff, "/rooms", 6) == 0) ) { 
+        //join: error 
+        else if(strncmp(buff, "/join", 5) == 0) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
           strcpy(buff, "You're already in a chat room.\r\n");
+          send(t->ConnectFD, buff, sizeof(buff), 0);
+        }
+
+        //rooms: error 
+        else if(strncmp(buff, "/rooms", 6) == 0) { 
+          memset(&buff, 0, sizeof(buff)); //clear message buffer
+          strcpy(buff, "Leave the chat room to see all available rooms.\r\n");
           send(t->ConnectFD, buff, sizeof(buff), 0);
         }
 
@@ -408,7 +415,10 @@ int main(int argc, char** argv) {
     }
   }
 
-  return 1;
+  // Close sockets and kill thread
+  close(SocketFD);
+  pthread_exit(NULL);
+  return 0;
 }
 
 

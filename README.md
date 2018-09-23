@@ -22,6 +22,8 @@ g++ -Wall katchat.cpp -o katchat
 
 #### Connecting Clients:
 
+Each client must give a unique username in order to log into katchat.
+
 * telnet:
 ```
 > $ telnet 127.0.0.1 30666
@@ -30,6 +32,8 @@ Connected to localhost.
 Escape character is '^]'.
 Welcome to katchat! [^._.^]ﾉ彡
 Please login to continue.
+sam
+Welcome sam.
 ```
 
 #### Commands:
