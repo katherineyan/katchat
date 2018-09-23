@@ -39,9 +39,14 @@ public:
   string get_title() const { return title; }
   int get_num_users() const { return num_users; }
   vector<string> get_usernames() const { return usernames; }
-  void add_user(string u) { 
+  int add_user(string u) { 
     usernames.push_back(u);
     num_users += 1; 
+    return usernames.size() - 1;
+  }
+  void remove_user(int index) {
+    usernames.erase(usernames.begin() + index);
+    num_users -= 1;
   }
   // bool operator==(const chat_room &a, const chat_room &b) {
   //   return !a.get_title().compare(b.get_title());
@@ -100,6 +105,9 @@ void* handle_client(void* arg) {
   bool loggedin = false;
   //in chatroom or not
   bool inchat = false;
+  //index of user within chatroom usernames vector
+  int chat_index;
+  //pointer to chatroom youre in
   chat_room* currchat;
 
   //send success message to client 
@@ -194,7 +202,8 @@ void* handle_client(void* arg) {
             //update info about room
             int index = distance(c_rooms.begin(), it);
             currchat = &c_rooms[index];
-            currchat->add_user(t->name);
+            chat_index = currchat->add_user(t->name);
+            inchat = true;
             //print all people in room
             vector<string> temp = currchat->get_usernames();
             for(vector<string>::const_iterator i = temp.begin(); i != temp.end(); ++i) {
@@ -253,8 +262,7 @@ void* handle_client(void* arg) {
 
         //leave: leaving room
         if(strncmp(buff, "/leave", 6) == 0) { 
-          //edit room variables
-
+          currchat->remove_user(chat_index);
           memset(&buff, 0, sizeof(buff)); //clear message buffer
           sprintf(buff, "* user has left chat: %s\r\n", t->name.c_str()); //how to broadcast to whole chat?
           send(t->ConnectFD, buff, sizeof(buff), 0);
