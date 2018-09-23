@@ -31,7 +31,7 @@ Trying 127.0.0.1...
 Connected to localhost.
 Escape character is '^]'.
 Welcome to katchat! [^._.^]ﾉ彡
-Please login to continue.
+Please enter a username.
 > katherine
 Sorry, username taken.
 > sam
