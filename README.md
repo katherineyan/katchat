@@ -32,7 +32,7 @@ Connected to localhost.
 Escape character is '^]'.
 Welcome to katchat! [^._.^]ﾉ彡
 Please login to continue.
-sam
+> sam
 Welcome sam.
 ```
 
