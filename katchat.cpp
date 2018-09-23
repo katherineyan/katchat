@@ -105,7 +105,7 @@ void* handle_client(void* arg) {
   chat_room* currchat;
 
   //send success message to client 
-  strcpy(buff, "Welcome to katchat! [^._.^]ﾉ彡\r\nPlease enter a username.\r\n");
+  strcpy(buff, "[^._.^]ﾉ彡 Welcome to katchat!\r\nPlease enter a username.\r\n");
   int retval = send(ConnectFD, buff, strlen(buff), 0);
   if (retval < 0) {
     perror("Error, send failed.");
@@ -236,7 +236,7 @@ void* handle_client(void* arg) {
         //quit: terminate connection
         else if(strncmp(buff, "/quit", 5) == 0) {
           memset(&buff, 0, sizeof(buff));
-          strcpy(buff, "Server closing control connection.\r\n");
+          strcpy(buff, "Cya.\r\n");
           send(ConnectFD, buff, sizeof(buff), 0);
           close(ConnectFD);
           break;
