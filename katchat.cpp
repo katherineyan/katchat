@@ -187,6 +187,10 @@ void* handle_client(void* arg) {
           //attempt to enter room
           vector<chat_room>::iterator it = find_if(c_rooms.begin(), c_rooms.end(), MatchString(roomname));
           if (it != c_rooms.end()) {
+            //success message !!!!!!! must broadcast to entire room
+            memset(&buff, 0, sizeof(buff)); 
+            sprintf(buff, "entering room: %s\r\n", t->name.c_str());
+            send(t->ConnectFD, buff, sizeof(buff), 0);
             //update info about room
             int index = distance(c_rooms.begin(), it);
             currchat = &c_rooms[index];
@@ -194,22 +198,21 @@ void* handle_client(void* arg) {
             //print all people in room
             vector<string> temp = currchat->get_usernames();
             for(vector<string>::const_iterator i = temp.begin(); i != temp.end(); ++i) {
-              memset(&buff, 0, sizeof(buff)); //clear message buffer
-              sprintf(buff, "* %s (**this is you)\r\n", i->c_str());
-              send(t->ConnectFD, buff, sizeof(buff), 0);
-              // if (*i == t->name) { //if it's yourself
-              //   memset(&buff, 0, sizeof(buff)); //clear message buffer
-              //   sprintf(buff, "* %hhd\r\n", *i->c_str());
-              //   send(t->ConnectFD, buff, sizeof(buff), 0);
-              // }
-              // else { //if it's someone else
-              //   memset(&buff, 0, sizeof(buff)); //clear message buffer
-              //   sprintf(buff, "* %hhd (**this is you)\r\n", *i->c_str());
-              //   send(t->ConnectFD, buff, sizeof(buff), 0);
-              // }
-              
+              if(i->compare(t->name)) { //if its you
+                memset(&buff, 0, sizeof(buff));
+                sprintf(buff, "* %s\r\n", i->c_str());
+                send(t->ConnectFD, buff, sizeof(buff), 0);
+              }
+              else {
+                memset(&buff, 0, sizeof(buff)); //if its not you
+                sprintf(buff, "* %s (**this is you)\r\n", i->c_str());
+                send(t->ConnectFD, buff, sizeof(buff), 0);
+              }      
             }
-
+            //end of list
+            memset(&buff, 0, sizeof(buff)); 
+            strcpy(buff, "end of list\r\n");
+            send(t->ConnectFD, buff, sizeof(buff), 0);
           }
           //room doesn't exist
           else {
@@ -217,32 +220,6 @@ void* handle_client(void* arg) {
             sprintf(buff, "Room %s doesn't exist.\r\n", roomname.c_str());
             send(t->ConnectFD, buff, sizeof(buff), 0);
           }
-
-          
-          // //attempt to enter room
-          // auto it = find_if(c_rooms.begin(), c_rooms.end(), [&roomname](chat_room curr) {
-          //   return !(curr.get_title() == roomname);
-          // });
-
-          // cout << it->get_title() << endl;
-
-
-
-          // vector<chat_room>::iterator it;
-          // it = find_if(c_rooms.begin(), c_rooms.end(), chat_room(string(roomname)));
-          // if(it != c_rooms.end()) { //enter
-          //   memset(&buff, 0, sizeof(buff));
-          //   sprintf(buff, "Entering room: %s", roomname);
-          //   send(t->ConnectFD, buff, sizeof(buff), 0);
-          //   inchat = true;
-          //   //enter room
-          //   //update list and num of people
-          //   //print list of people
-          // }
-
-
-
-
         }
 
         //quit: terminate connection
