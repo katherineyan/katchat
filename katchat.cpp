@@ -111,7 +111,7 @@ void* handle_client(void* arg) {
   chat_room* currchat;
 
   //send success message to client 
-  strcpy(buff, "Welcome to katchat!\r\nPlease login to continue.\r\n");
+  strcpy(buff, "Welcome to katchat! [^._.^]ﾉ彡\r\nPlease login to continue.\r\n");
   int retval = send(t->ConnectFD, buff, strlen(buff), 0);
   if (retval < 0) {
     perror("Error, send failed.");
