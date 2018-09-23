@@ -1,5 +1,6 @@
-# katchat [^._.^]ﾉ彡
+# katchat 
 
+[^._.^]ﾉ彡
 Welcome to katchat, a simple chat server built entirely in C++.
 
 Description
