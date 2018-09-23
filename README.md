@@ -94,11 +94,12 @@ All commands begin with a forward slash "/".
 - ```/rooms```: show all active chat rooms
 - ```/join chatty_kathy```: join the chat room named *chatty_kathy*
 - ```/leave```: leave a chat room
+- ```/help```: get help
 - ```/quit```: close katchat
 
 #### Chatting:
 
-Use ```/join``` to join a chat room and just start talking! Use ```/leave``` to leave the room when you're done.
+Use ```/join``` to join a chat room and just start talking! 
 
 Try typing "katchat" in a chat room!
 
