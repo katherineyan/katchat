@@ -65,7 +65,7 @@ Usage
 #### Compile and Run:
 ```
 > $ make
-g++  -pthread -Wall katchat.cpp -o katchat
+g++ -pthread -Wall katchat.cpp -o katchat
 
 > $ ./katchat 30666
 ```
