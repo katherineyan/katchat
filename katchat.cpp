@@ -154,7 +154,7 @@ void* handle_client(void* arg) {
       if (!inchat) {
 
         //rooms: show active rooms 
-        if(strncmp(buff, "/rooms", 6) == 0) {
+        if((strncmp(buff, "/rooms", 6) == 0) && (strncmp(&buff[6], "\r", 1) == 0)) {
           //no rooms
           if (c_rooms.empty()) { 
             memset(&buff, 0, sizeof(buff));
@@ -179,12 +179,21 @@ void* handle_client(void* arg) {
 
         //join: join an active room
         else if(strncmp(buff, "/join", 5) == 0) {
-          //get requested room name
           string roomname = string(&buff[6]);
-          if (!roomname.empty()) {
-            roomname.erase(roomname.size() - 1);
-            roomname.erase(roomname.size() - 1);
+          //get requested room name
+          if(strncmp(&buff[5], " ", 1) == 0) {
+            if (!roomname.empty()) {
+              roomname.erase(roomname.size() - 1);
+              roomname.erase(roomname.size() - 1);
+            }
           }
+          else{
+            memset(&buff, 0, sizeof(buff));
+            sprintf(buff, "%c[%dm%c[%dmRoom doesn't exist.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
+            send(ConnectFD, buff, sizeof(buff), 0);
+            continue;
+          }
+          
           //attempt to enter room
           vector<chat_room>::iterator it = find_if(c_rooms.begin(), c_rooms.end(), MatchString(roomname));
           if (it != c_rooms.end()) {  //if we can enter the room
@@ -227,6 +236,7 @@ void* handle_client(void* arg) {
           }
           //room doesn't exist
           else {
+            // cout << roomname << endl;
             memset(&buff, 0, sizeof(buff));
             sprintf(buff, "%c[%dm%c[%dmRoom %s doesn't exist.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, roomname.c_str(), 0x1b, 0);
             send(ConnectFD, buff, sizeof(buff), 0);
@@ -234,7 +244,7 @@ void* handle_client(void* arg) {
         }
 
         //quit: terminate connection
-        else if(strncmp(buff, "/quit", 5) == 0) {
+        else if(strncmp(buff, "/quit", 5) == 0 && strncmp(&buff[5], "\r", 1) == 0) {
           //remove user from usernames list
           users.erase(std::remove(users.begin(), users.end(), name), users.end());
           memset(&buff, 0, sizeof(buff));
@@ -245,14 +255,14 @@ void* handle_client(void* arg) {
         }
 
         //help: show info
-        else if(strncmp(buff, "/help", 5) == 0) {
+        else if(strncmp(buff, "/help", 5) == 0 && strncmp(&buff[5], "\r", 1) == 0) {
           memset(&buff, 0, sizeof(buff));
           sprintf(buff, "%c[%dm%c[%dmUsername: %s.\r\nUse /rooms to see list of available chat rooms.\r\nUse /join to join a chat room.\r\nUse /quit to close the connection.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, name.c_str(), 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
         //leave: error message
-        else if(strncmp(buff, "/leave", 6) == 0) {
+        else if(strncmp(buff, "/leave", 6) == 0 && strncmp(&buff[6], "\r", 1) == 0) {
           memset(&buff, 0, sizeof(buff));
           sprintf(buff, "%c[%dm%c[%dmYou're not in a chat room right now.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
@@ -271,7 +281,7 @@ void* handle_client(void* arg) {
       else {
 
         //leave: leaving room
-        if(strncmp(buff, "/leave", 6) == 0) { 
+        if((strncmp(buff, "/leave", 6) == 0) && (strncmp(&buff[6], "\r", 1) == 0)) { 
           //send messsage about leaving
           vector<int> fds = currchat->get_fds();
           for(vector<int>::iterator i = fds.begin(); i != fds.end(); ++i) {
@@ -291,28 +301,28 @@ void* handle_client(void* arg) {
         }
 
         //join: error 
-        else if(strncmp(buff, "/join", 5) == 0) { 
+        else if(strncmp(buff, "/join", 5) == 0 && strncmp(&buff[5], "\r", 1) == 0) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
           sprintf(buff, "%c[%dm%c[%dmYou're already in a chat room.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
         //rooms: error 
-        else if(strncmp(buff, "/rooms", 6) == 0) { 
+        else if(strncmp(buff, "/rooms", 6) == 0 && strncmp(&buff[6], "\r", 1) == 0) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
           sprintf(buff, "%c[%dm%c[%dmLeave the chat room to see all available rooms.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
         //help: show help
-        else if(strncmp(buff, "/help", 5) == 0) { 
+        else if(strncmp(buff, "/help", 5) == 0 && strncmp(&buff[5], "\r", 1) == 0) { 
           memset(&buff, 0, sizeof(buff));
           sprintf(buff, "%c[%dm%c[%dmUsername: %s.\r\nCurrent chat room: %s.\r\nStart typing to talk to other people in the chat!\r\nUse /leave to leave the chat room.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, name.c_str(), currchat->get_title().c_str(), 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
         //quit: error
-        else if(strncmp(buff, "/quit", 5) == 0) { 
+        else if(strncmp(buff, "/quit", 5) == 0 && strncmp(&buff[5], "\r", 1) == 0) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
           sprintf(buff, "%c[%dm%c[%dmYou must exit the room before you quit.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
