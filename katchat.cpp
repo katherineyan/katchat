@@ -331,7 +331,7 @@ void* handle_client(void* arg) {
           vector<int> fds = currchat->get_fds();
           //send enter message to other clients in room
           memset(&buff, 0, sizeof(buff));
-          sprintf(buff, "%s: %s", name.c_str(), buff2);
+          sprintf(buff, "%c[%dm%c[38;5;%dm%s: %s%c[%dm", 0x1B, 1, 0x1B, ConnectFD, name.c_str(), buff2, 0x1B, 0);
           for(vector<int>::iterator i = fds.begin(); i != fds.end(); ++i) {
             send(*i, buff, sizeof(buff), 0);
           }
