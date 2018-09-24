@@ -105,8 +105,8 @@ void* handle_client(void* arg) {
   //pointer to chatroom youre in
   chat_room* currchat;
 
-  //send success message to client 
-  strcpy(buff, "[^._.^]ﾉ彡 Welcome to katchat!\r\nPlease enter a username.\r\n");
+  //send success message to client
+  sprintf(buff, "%c[%dm%c[%dm[^._.^]ﾉ彡 Welcome to katchat!\r\nPlease enter a username.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0); 
   int retval = send(ConnectFD, buff, strlen(buff), 0);
   if (retval < 0) {
     perror("Error, send failed.");
@@ -137,10 +137,10 @@ void* handle_client(void* arg) {
       name = n;
           
       if (count(users.begin(), users.end(), name)) {
-        strcpy(buff, "Sorry, username taken.\r\n");
+        sprintf(buff, "%c[%dm%c[%dmSorry, username taken.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
       }
       else {
-        sprintf(buff, "Welcome %s.\r\n", name.c_str());
+        sprintf(buff, "%c[%dm%c[%dmWelcome %s.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, name.c_str(), 0x1b, 0);
         users.push_back(name); //add name to user list
         loggedin = true;
       }  
@@ -158,21 +158,21 @@ void* handle_client(void* arg) {
           //no rooms
           if (c_rooms.empty()) { 
             memset(&buff, 0, sizeof(buff));
-            strcpy(buff, "There are currently no active rooms.\r\n");
+            sprintf(buff, "%c[%dm%c[%dmThere are currently no active rooms.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
             send(ConnectFD, buff, sizeof(buff), 0);
           }
           //rooms exist
           else {
             memset(&buff, 0, sizeof(buff));
-            strcpy(buff, "Active rooms are:\r\n");
+            sprintf(buff, "%c[%dm%c[%dmActive rooms are:%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
             send(ConnectFD, buff, sizeof(buff), 0);
             for(vector<chat_room>::const_iterator i = c_rooms.begin(); i != c_rooms.end(); ++i) {
               memset(&buff, 0, sizeof(buff)); //clear message buffer
-              sprintf(buff, "* %s (%d)\r\n", i->get_title().c_str(), i->get_num_users());
+              sprintf(buff, "%c[%dm%c[%dm* %s (%d)%c[%dm\r\n", 0x1B, 1, 0x1B, 7, i->get_title().c_str(), i->get_num_users(), 0x1b, 0);
               send(ConnectFD, buff, sizeof(buff), 0);
             }
             memset(&buff, 0, sizeof(buff)); //clear message buffer
-            strcpy(buff, "end of list\r\n");
+            sprintf(buff, "%c[%dm%c[%dmend of list%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
             send(ConnectFD, buff, sizeof(buff), 0);
           } 
         }
@@ -190,7 +190,7 @@ void* handle_client(void* arg) {
           if (it != c_rooms.end()) {  //if we can enter the room
             //send success message to client
             memset(&buff, 0, sizeof(buff));
-            sprintf(buff, "entering room: %s\r\n", roomname.c_str());
+            sprintf(buff, "%c[%dm%c[%dmentering room: %s%c[%dm\r\n", 0x1B, 1, 0x1B, 7, roomname.c_str(), 0x1b, 0);
             send(ConnectFD, buff, sizeof(buff), 0);
             //set currchat to point to room
             int index = distance(c_rooms.begin(), it);
@@ -199,7 +199,7 @@ void* handle_client(void* arg) {
             vector<int> fds = currchat->get_fds();
             for(vector<int>::iterator i = fds.begin(); i != fds.end(); ++i) {
               memset(&buff, 0, sizeof(buff)); 
-              sprintf(buff, "* new user joined chat: %s\r\n", name.c_str());
+              sprintf(buff, "%c[%dm%c[%dm* new user joined chat: %s%c[%dm\r\n", 0x1B, 1, 0x1B, 7, name.c_str(), 0x1b, 0);
               send(*i, buff, sizeof(buff), 0);
             }
             //add new user to the chat_room object
@@ -211,24 +211,24 @@ void* handle_client(void* arg) {
             for(vector<string>::const_iterator i = temp.begin(); i != temp.end(); ++i) {
               if(i->compare(name)) { //if its you
                 memset(&buff, 0, sizeof(buff));
-                sprintf(buff, "* %s\r\n", i->c_str());
+                sprintf(buff, "%c[%dm%c[%dm* %s%c[%dm\r\n", 0x1B, 1, 0x1B, 7, i->c_str(), 0x1b, 0);
                 send(ConnectFD, buff, sizeof(buff), 0);
               }
               else {
                 memset(&buff, 0, sizeof(buff)); //if its not you
-                sprintf(buff, "* %s (**this is you)\r\n", i->c_str());
+                sprintf(buff, "%c[%dm%c[%dm* %s (**this is you)%c[%dm\r\n", 0x1B, 1, 0x1B, 7, i->c_str(), 0x1b, 0);
                 send(ConnectFD, buff, sizeof(buff), 0);
               }      
             }
             //end of list
             memset(&buff, 0, sizeof(buff)); 
-            strcpy(buff, "end of list\r\n");
+            sprintf(buff, "%c[%dm%c[%dmend of list%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
             send(ConnectFD, buff, sizeof(buff), 0);
           }
           //room doesn't exist
           else {
             memset(&buff, 0, sizeof(buff));
-            sprintf(buff, "Room %s doesn't exist.\r\n", roomname.c_str());
+            sprintf(buff, "%c[%dm%c[%dmRoom %s doesn't exist.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, roomname.c_str(), 0x1b, 0);
             send(ConnectFD, buff, sizeof(buff), 0);
           }
         }
@@ -236,7 +236,7 @@ void* handle_client(void* arg) {
         //quit: terminate connection
         else if(strncmp(buff, "/quit", 5) == 0) {
           memset(&buff, 0, sizeof(buff));
-          strcpy(buff, "Cya.\r\n");
+          sprintf(buff, "%c[%dm%c[%dmCya.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
           close(ConnectFD);
           break;
@@ -245,21 +245,21 @@ void* handle_client(void* arg) {
         //help: show info
         else if(strncmp(buff, "/help", 5) == 0) {
           memset(&buff, 0, sizeof(buff));
-          sprintf(buff, "Username: %s.\r\nUse /rooms to see list of available chat rooms.\r\nUse /join to join a chat room.\r\nUse /quit to close the connection.\r\n", name.c_str());
+          sprintf(buff, "%c[%dm%c[%dmUsername: %s.\r\nUse /rooms to see list of available chat rooms.\r\nUse /join to join a chat room.\r\nUse /quit to close the connection.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, name.c_str(), 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
         //leave: error message
         else if(strncmp(buff, "/leave", 6) == 0) {
           memset(&buff, 0, sizeof(buff));
-          strcpy(buff, "You're not in a chat room right now.\r\n");
+          sprintf(buff, "%c[%dm%c[%dmYou're not in a chat room right now.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
         //unknown command
         else {
           memset(&buff, 0, sizeof(buff));
-          strcpy(buff, "Unknown command.\r\n");
+          sprintf(buff, "%c[%dm%c[%dmUnknown command.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
@@ -275,12 +275,12 @@ void* handle_client(void* arg) {
           for(vector<int>::iterator i = fds.begin(); i != fds.end(); ++i) {
             if(*i == ConnectFD) { //if its you
               memset(&buff, 0, sizeof(buff));
-              sprintf(buff, "* user has left chat: %s (**this is you)\r\n", name.c_str());
+              sprintf(buff, "%c[%dm%c[%dm* user has left chat: %s (**this is you)%c[%dm\r\n", 0x1B, 1, 0x1B, 7, name.c_str(), 0x1b, 0);
               send(ConnectFD, buff, sizeof(buff), 0);
             }
             else {
               memset(&buff, 0, sizeof(buff)); //if its not you
-              sprintf(buff, "* user has left chat: %s\r\n", name.c_str());
+              sprintf(buff, "%c[%dm%c[%dm* user has left chat: %s%c[%dm\r\n", 0x1B, 1, 0x1B, 7, name.c_str(), 0x1b, 0);
               send(*i, buff, sizeof(buff), 0);
             } 
           }
@@ -291,35 +291,35 @@ void* handle_client(void* arg) {
         //join: error 
         else if(strncmp(buff, "/join", 5) == 0) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
-          strcpy(buff, "You're already in a chat room.\r\n");
+          sprintf(buff, "%c[%dm%c[%dmYou're already in a chat room.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
         //rooms: error 
         else if(strncmp(buff, "/rooms", 6) == 0) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
-          strcpy(buff, "Leave the chat room to see all available rooms.\r\n");
+          sprintf(buff, "%c[%dm%c[%dmLeave the chat room to see all available rooms.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
         //help: show help
         else if(strncmp(buff, "/help", 5) == 0) { 
           memset(&buff, 0, sizeof(buff));
-          sprintf(buff, "Username: %s.\r\nCurrent chat room: %s.\r\nStart typing to talk to other people in the chat!\r\nUse /leave to leave the chat room.\r\n", name.c_str(), currchat->get_title().c_str());
+          sprintf(buff, "%c[%dm%c[%dmUsername: %s.\r\nCurrent chat room: %s.\r\nStart typing to talk to other people in the chat!\r\nUse /leave to leave the chat room.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, name.c_str(), currchat->get_title().c_str(), 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
         //quit: error
         else if(strncmp(buff, "/quit", 5) == 0) { 
           memset(&buff, 0, sizeof(buff)); //clear message buffer
-          strcpy(buff, "You must exit the room before you quit.\r\n");
+          sprintf(buff, "%c[%dm%c[%dmYou must exit the room before you quit.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
         //unknown command (starts with a "/")
         else if (strncmp(buff, "/", 1) == 0){
           memset(&buff, 0, sizeof(buff));
-          strcpy(buff, "Unknown command.\r\n");
+          sprintf(buff, "%c[%dm%c[%dmUnknown command.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
         }
 
@@ -339,7 +339,7 @@ void* handle_client(void* arg) {
           if (strncmp(buff2, "katchat", 7) == 0){
             for(vector<int>::iterator i = fds.begin(); i != fds.end(); ++i) {
               memset(&buff, 0, sizeof(buff));
-              strcpy(buff, "[^._.^]ﾉ彡 meow\r\n");
+              sprintf(buff, "%c[%dm%c[%dm[^._.^]ﾉ彡 meow%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
               send(*i, buff, sizeof(buff), 0);
             }
           }
