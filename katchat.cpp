@@ -235,6 +235,8 @@ void* handle_client(void* arg) {
 
         //quit: terminate connection
         else if(strncmp(buff, "/quit", 5) == 0) {
+          //remove user from usernames list
+          users.erase(std::remove(users.begin(), users.end(), name), users.end());
           memset(&buff, 0, sizeof(buff));
           sprintf(buff, "%c[%dm%c[%dmCya.%c[%dm\r\n", 0x1B, 1, 0x1B, 7, 0x1b, 0);
           send(ConnectFD, buff, sizeof(buff), 0);
