@@ -23,6 +23,8 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <vector>
+#include <algorithm>
+#include <pthread.h>
 using namespace std;
 
 
